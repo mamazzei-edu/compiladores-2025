@@ -1,0 +1,79 @@
+<project name="SimpleExpr" 
+         default="dist" basedir=".">
+    <description>
+        Arquivo Ant para construir um analisador sintático simples.
+    </description>
+    <!-- propriedades globais -->
+    <property name="mainClass" value="parser.Main" />
+    <property name="src" location="src" />
+    <property name="tools" location="tools" />
+    <property name="jflex" location="src/jflex" />
+    <property name="cup" location="src/cup" />
+    <property name="build" location="build" />
+    <property name="dist" location="dist" />
+    <!-- Tarefa para chamar a ferramenta JFlex -->
+    <taskdef name="jflex" classname="jflex.anttask.JFlexTask"
+             classpath="${tools}/jflex-full-1.9.1.jar" />
+    <!-- Tarefa para chamar a ferramenta CUP -->
+    <taskdef name="cup" classname="java_cup.anttask.CUPTask"
+             classpath="${tools}/java-cup-11b.jar" />
+    <!-- Alvo: init -->
+    <target name="init">
+        <!-- Criar um diretório para armazenar as classes compiladas -->
+        <mkdir dir="${build}" />
+    </target>
+    <!-- Alvo: genscanner -->
+    <target name="genscanner" depends="init" description="gera o scanner">
+        <!-- Executa o JFlex -->
+        <jflex file="${jflex}/Scanner.jflex"
+                destdir="${src}" />
+    </target>
+    <!-- Alvo: genparser -->
+    <target name="genparser" depends="init" description="gera o parser">
+        <!-- Executa o CUP -->
+        <cup srcfile="${cup}/Parser.cup" destdir="${src}" parser="Parser"
+             interface="true" locations="false" />
+    </target>
+    <!-- Alvo: compile -->
+    <target name="compile" depends="genscanner,genparser" description="compila os fontes">
+        <!-- Compila todos os códigos Java -->
+        <javac srcdir="${src}" destdir="${build}"
+               classpath="${tools}/java-cup-11b.jar" debug="true"/>
+    </target>
+    <!-- Alvo dist - cria o produto final, que pode ser redistribuído -->
+    <target name="dist" depends="compile" description="cria uma distribuição">
+        <!-- Cria o diretório de distribuição -->
+        <mkdir dir="${dist}" />
+        <!-- Empacota o programa em um arquivo JAR -->
+        <jar jarfile="${dist}/simple_expr.jar"
+             basedir="${build}">
+            <manifest>
+                <attribute name="Main-Class" value="${mainClass}" />
+            </manifest>
+            <!-- É necessário adicionar as bibliotecas do CUP!!! -->
+            <zipgroupfileset dir="${tools}" includes="java-cup-11b.jar" />
+        </jar>
+    </target>
+    <!-- Alvo jar - o mesmo que dist -->
+    <target name="jar" depends="dist" description="cria uma distribuição">
+    </target>
+    <!-- Alvo run - executa o código com arquivo de teste -->
+    <target name="run" depends="dist" description="executa e testa o projeto">
+        <java classname="${mainClass}" classpath="${dist}/simple_expr.jar" fork="true">
+            <arg value="teste.input"/>
+        </java>
+    </target>
+    <!-- Alvo clean - limpa os arquivos gerados -->
+    <target name="clean" description="limpar arquivos gerados">
+        <delete dir="${build}" />
+        <delete dir="${dist}" />
+        <delete>
+            <fileset dir="${src}/parser">
+                <include name="Scanner.java" />
+                <include name="Scanner.java~" />
+                <include name="Parser.java" />
+                <include name="sym.java" />
+            </fileset>
+        </delete>
+    </target>
+</project>
